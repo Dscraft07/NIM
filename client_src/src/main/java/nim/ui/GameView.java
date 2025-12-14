@@ -381,7 +381,10 @@ public class GameView {
      */
     private void showGameOver() {
         String winner = gameState.getWinner();
-        boolean iWon = winner.equals(gameState.getNickname());
+        String myNickname = gameState.getNickname();
+        boolean iWon = winner.equals(myNickname);
+        
+        Logger.debug("GAME_OVER: winner='%s', myNickname='%s', iWon=%b", winner, myNickname, iWon);
         
         gameOverTitle.setText(iWon ? "Vyhráli jste!" : "Prohráli jste");
         gameOverTitle.setTextFill(Color.web(iWon ? Components.SUCCESS_COLOR : Components.DANGER_COLOR));
