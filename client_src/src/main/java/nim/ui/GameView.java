@@ -515,12 +515,29 @@ public class GameView {
                 
             case LEAVE_OK:
                 gameState.leaveRoom();
-                LobbyView lobbyView = new LobbyView(stage, client, gameState);
-                lobbyView.show();
+                LobbyView lobbyViewLeave = new LobbyView(stage, client, gameState);
+                lobbyViewLeave.show();
                 break;
                 
             case GAME_RESUMED:
                 handleGameResumed(message);
+                break;
+            
+            case LOGIN_OK:
+                // Server restartoval - nemá náš herní stav
+                // Přejdi do lobby (bez GAME_RESUMED = žádná hra k obnovení)
+                Logger.info("Server restarted, returning to lobby");
+                gameState.reset();
+                LobbyView lobbyViewReset = new LobbyView(stage, client, gameState);
+                lobbyViewReset.show();
+                break;
+                
+            case LOGIN_ERR:
+                // Chyba při reconnectu - vrať na login
+                Logger.warning("Login failed after reconnect: %s", message.getParam(1));
+                gameState.reset();
+                LoginView loginView = new LoginView(stage);
+                loginView.show();
                 break;
                 
             case ERROR:

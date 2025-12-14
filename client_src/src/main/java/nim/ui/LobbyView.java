@@ -443,6 +443,23 @@ public class LobbyView {
             case GAME_RESUMED:
                 handleGameResumed(message);
                 break;
+            
+            case LOGIN_OK:
+                // Server restartoval - jsme znovu přihlášeni
+                // Obnov seznam místností
+                Logger.info("Server restarted, refreshing lobby");
+                gameState.leaveRoom();
+                hideWaitingPane();
+                handleRefresh();
+                break;
+                
+            case LOGIN_ERR:
+                // Chyba při reconnectu - vrať na login
+                Logger.warning("Login failed after reconnect: %s", message.getParam(1));
+                gameState.reset();
+                LoginView loginView = new LoginView(stage);
+                loginView.show();
+                break;
                 
             case ERROR:
                 showError("Chyba serveru: " + message.getParam(1));
