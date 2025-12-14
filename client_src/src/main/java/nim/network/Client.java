@@ -53,6 +53,7 @@ public class Client {
     private volatile int reconnectAttempts = 0;
     private volatile long lastPingTime = 0;
     private volatile boolean waitingForPong = false;
+    private volatile boolean disconnectHandlerCalled = false;
 
     /**
      * Stavy pripojeni.
@@ -123,6 +124,7 @@ public class Client {
             
             connected = true;
             reconnectAttempts = 0;
+            disconnectHandlerCalled = false;
             
             // Spust prijimaci vlakno
             startReceiver();
@@ -335,7 +337,8 @@ public class Client {
         if (message.getType() == Protocol.MessageType.SERVER_SHUTDOWN) {
             Logger.info("Server is shutting down");
             disconnect(false);
-            if (disconnectHandler != null) {
+            if (disconnectHandler != null && !disconnectHandlerCalled) {
+                disconnectHandlerCalled = true;
                 disconnectHandler.run();
             }
             return;
@@ -369,7 +372,8 @@ public class Client {
             Logger.error("Max reconnect attempts reached (%d), giving up", reconnectAttempts);
             reconnecting = false;
             notifyConnectionState(ConnectionState.DISCONNECTED);
-            if (disconnectHandler != null) {
+            if (disconnectHandler != null && !disconnectHandlerCalled) {
+                disconnectHandlerCalled = true;
                 disconnectHandler.run();
             }
             return;
@@ -409,6 +413,7 @@ public class Client {
                 reconnecting = false;
                 reconnectAttempts = 0;
                 waitingForPong = false;
+                disconnectHandlerCalled = false;
                 
                 // Spust prijimaci vlakno
                 startReceiver();
