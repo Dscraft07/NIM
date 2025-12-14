@@ -50,48 +50,36 @@
         <mkdir dir="${dist.dir}"/>
     </target>
 
-    <!-- Download JavaFX JARs if not present -->
+    <!-- Download JavaFX JARs - ONLY platform-specific -->
     <target name="download-javafx" depends="init">
         <echo message="Downloading JavaFX ${javafx.version} for ${javafx.platform}..."/>
         
-        <!-- Base module -->
-        <get src="${javafx.base.url}/javafx-base/${javafx.version}/javafx-base-${javafx.version}.jar"
-             dest="${lib.dir}/javafx-base-${javafx.version}.jar" skipexisting="true"/>
+        <!-- Base -->
         <get src="${javafx.base.url}/javafx-base/${javafx.version}/javafx-base-${javafx.version}-${javafx.platform}.jar"
-             dest="${lib.dir}/javafx-base-${javafx.version}-${javafx.platform}.jar" skipexisting="true"/>
+             dest="${lib.dir}/javafx-base-${javafx.version}-${javafx.platform}.jar"
+             skipexisting="true"/>
         
-        <!-- Graphics module -->
-        <get src="${javafx.base.url}/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}.jar"
-             dest="${lib.dir}/javafx-graphics-${javafx.version}.jar" skipexisting="true"/>
+        <!-- Graphics -->
         <get src="${javafx.base.url}/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}-${javafx.platform}.jar"
-             dest="${lib.dir}/javafx-graphics-${javafx.version}-${javafx.platform}.jar" skipexisting="true"/>
+             dest="${lib.dir}/javafx-graphics-${javafx.version}-${javafx.platform}.jar"
+             skipexisting="true"/>
         
-        <!-- Controls module -->
-        <get src="${javafx.base.url}/javafx-controls/${javafx.version}/javafx-controls-${javafx.version}.jar"
-             dest="${lib.dir}/javafx-controls-${javafx.version}.jar" skipexisting="true"/>
+        <!-- Controls -->
         <get src="${javafx.base.url}/javafx-controls/${javafx.version}/javafx-controls-${javafx.version}-${javafx.platform}.jar"
-             dest="${lib.dir}/javafx-controls-${javafx.version}-${javafx.platform}.jar" skipexisting="true"/>
+             dest="${lib.dir}/javafx-controls-${javafx.version}-${javafx.platform}.jar"
+             skipexisting="true"/>
         
-        <!-- FXML module -->
-        <get src="${javafx.base.url}/javafx-fxml/${javafx.version}/javafx-fxml-${javafx.version}.jar"
-             dest="${lib.dir}/javafx-fxml-${javafx.version}.jar" skipexisting="true"/>
+        <!-- FXML -->
         <get src="${javafx.base.url}/javafx-fxml/${javafx.version}/javafx-fxml-${javafx.version}-${javafx.platform}.jar"
-             dest="${lib.dir}/javafx-fxml-${javafx.version}-${javafx.platform}.jar" skipexisting="true"/>
+             dest="${lib.dir}/javafx-fxml-${javafx.version}-${javafx.platform}.jar"
+             skipexisting="true"/>
     </target>
 
-    <!-- Define classpath -->
-    <path id="classpath">
-        <fileset dir="${lib.dir}">
-            <include name="*.jar"/>
-        </fileset>
-    </path>
-
-    <!-- Compile -->
+    <!-- Compile - using ONLY module-path for JavaFX -->
     <target name="compile" depends="download-javafx">
-        <echo message="Compiling sources..."/>
+        <echo message="Compiling sources with module-path..."/>
         <javac srcdir="${src.dir}" 
                destdir="${classes.dir}" 
-               classpathref="classpath"
                includeantruntime="false"
                source="17"
                target="17"
@@ -103,12 +91,11 @@
         </javac>
     </target>
 
-    <!-- Run -->
+    <!-- Run - using ONLY module-path for JavaFX (NOT classpath) -->
     <target name="run" depends="compile">
         <echo message="Running Nim Client..."/>
         <java classname="${main.class}" fork="true" failonerror="true">
             <classpath>
-                <path refid="classpath"/>
                 <pathelement location="${classes.dir}"/>
             </classpath>
             <jvmarg value="--module-path"/>

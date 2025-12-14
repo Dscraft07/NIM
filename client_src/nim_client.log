@@ -13,3 +13,15 @@
 [2025-12-14 13:19:19] [INFO] Reconnected to server successfully
 [2025-12-14 13:19:19] [WARNING] Unexpected message in lobby: LOGIN_OK
 [2025-12-14 13:19:19] [INFO] Application closing...
+[2025-12-14 14:28:04] [INFO] Application starting...
+[2025-12-14 14:28:04] [INFO] Login view displayed
+[2025-12-14 14:28:04] [INFO] Application started successfully
+[2025-12-14 14:28:31] [ERROR] Failed to connect to server: Connect timed out
+java.net.SocketTimeoutException: Connect timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:547)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:594)
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:284)
+	at java.base/java.net.Socket.connect(Socket.java:659)
+	at nim.network.Client.connect(Unknown Source)
+	at nim.ui.LoginView.lambda$handleConnect$0(Unknown Source)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
