@@ -1099,17 +1099,33 @@ void server_handle_message(Server *server, Player *player, const char *message) 
 }
 
 void server_handle_disconnect(Server *server, Player *player, bool graceful) {
-    if (player == NULL) return;
+    if (server == NULL) {
+        LOG_ERROR("server_handle_disconnect: server is NULL!");
+        return;
+    }
+    if (player == NULL) {
+        LOG_ERROR("server_handle_disconnect: player is NULL!");
+        return;
+    }
+    
+    LOG_DEBUG("server_handle_disconnect: player='%s', graceful=%d, room_id=%d",
+              player->nickname[0] ? player->nickname : "(unknown)",
+              graceful, player->room_id);
     
     char response[BUFFER_SIZE];
     
     /* Pokud je ve hre, informuj protihrace */
     if (player->room_id >= 0) {
+        LOG_DEBUG("server_handle_disconnect: finding room %d", player->room_id);
         Room *room = room_find_by_id(server->rooms, server->config.max_rooms, player->room_id);
+        
         if (room != NULL) {
+            LOG_DEBUG("server_handle_disconnect: room found, getting opponent");
             Player *opponent = room_get_opponent(room, player);
+            LOG_DEBUG("server_handle_disconnect: opponent=%p", (void*)opponent);
             
             if (graceful || opponent == NULL) {
+                LOG_DEBUG("server_handle_disconnect: graceful path");
                 /* Graceful disconnect nebo zadny protihrac - ukonci hru */
                 if (room->game.state == GAME_STATE_PLAYING) {
                     room->game.state = GAME_STATE_FINISHED;
@@ -1126,29 +1142,42 @@ void server_handle_disconnect(Server *server, Player *player, bool graceful) {
                 
                 room_remove_player(room, player);
             } else {
+                LOG_DEBUG("server_handle_disconnect: unexpected disconnect path");
                 /* Neocekavany disconnect - zachovej pro reconnect */
                 if (opponent != NULL && opponent->socket_fd >= 0) {
+                    LOG_DEBUG("server_handle_disconnect: sending PLAYER_STATUS to opponent");
                     protocol_create_player_status(response, sizeof(response),
                                                    player->nickname, STATUS_DISCONNECTED);
                     server_send_to_player(opponent, response);
+                    LOG_DEBUG("server_handle_disconnect: PLAYER_STATUS sent");
                 }
                 
                 /* Pozastav hru */
+                LOG_DEBUG("server_handle_disconnect: game state = %d", room->game.state);
                 if (room->game.state == GAME_STATE_PLAYING) {
+                    LOG_DEBUG("server_handle_disconnect: pausing game");
                     game_pause(&room->game);
+                    LOG_DEBUG("server_handle_disconnect: game paused");
                 }
                 
                 /* Zachovej hrace pro reconnect */
+                LOG_DEBUG("server_handle_disconnect: resetting player for reconnect");
                 player_reset(player, true);
+                LOG_DEBUG("server_handle_disconnect: updating max_fd");
                 update_max_fd(server);
+                LOG_DEBUG("server_handle_disconnect: done (reconnect path)");
                 return;
             }
+        } else {
+            LOG_WARNING("server_handle_disconnect: room %d not found!", player->room_id);
         }
     }
     
     /* Uplne odpojeni */
+    LOG_DEBUG("server_handle_disconnect: full disconnect, resetting player");
     player_reset(player, false);
     update_max_fd(server);
+    LOG_DEBUG("server_handle_disconnect: done");
 }
 
 void server_handle_timeout(Server *server, Player *player) {

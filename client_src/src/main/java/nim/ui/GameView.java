@@ -40,6 +40,7 @@ public class GameView {
     private Spinner<Integer> takeSpinner;
     private Button takeButton;
     private Button skipButton;
+    private Label skipNoteLabel;
     private Label statusLabel;
     private Region statusIndicator;
     private VBox gameOverPane;
@@ -159,10 +160,10 @@ public class GameView {
         skipButton.setOnAction(e -> handleSkip());
         skipButton.setDisable(!gameState.isMyTurn() || !gameState.canSkip());
         
-        Label skipNote = Components.createTextLight(
+        skipNoteLabel = Components.createTextLight(
                 gameState.canSkip() ? "(zbývá 1 přeskočení)" : "(vyčerpáno)");
         
-        skipBox.getChildren().addAll(skipLabel, skipButton, skipNote);
+        skipBox.getChildren().addAll(skipLabel, skipButton, skipNoteLabel);
         
         controlsPanel.getChildren().addAll(takeBox, skipBox);
 
@@ -287,6 +288,11 @@ public class GameView {
         
         mySkipsLabel.setText("Vaše přeskočení: " + gameState.getMySkipsRemaining());
         oppSkipsLabel.setText("Soupeřova přeskočení: " + gameState.getOpponentSkipsRemaining());
+        
+        // Aktualizuj poznámku u tlačítka přeskočit
+        if (skipNoteLabel != null) {
+            skipNoteLabel.setText(gameState.canSkip() ? "(zbývá 1 přeskočení)" : "(vyčerpáno)");
+        }
         
         // Aktualizuj spinner
         int maxTake = gameState.getMaxTake();
