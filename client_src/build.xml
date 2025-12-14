@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="nim-client" default="run" basedir=".">
+    <description>
+        Nim Game Client - JavaFX Application
+    </description>
+
+    <!-- Properties -->
+    <property name="src.dir" value="src/main/java"/>
+    <property name="build.dir" value="build"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="lib.dir" value="lib"/>
+    <property name="dist.dir" value="dist"/>
+    <property name="main.class" value="nim.Main"/>
+    
+    <!-- JavaFX version - use 21 for better macOS compatibility -->
+    <property name="javafx.version" value="21.0.1"/>
+    
+    <!-- Detect OS for JavaFX platform -->
+    <condition property="javafx.platform" value="mac-aarch64">
+        <and>
+            <os family="mac"/>
+            <os arch="aarch64"/>
+        </and>
+    </condition>
+    <condition property="javafx.platform" value="mac">
+        <and>
+            <os family="mac"/>
+            <not><os arch="aarch64"/></not>
+        </and>
+    </condition>
+    <condition property="javafx.platform" value="linux">
+        <os family="unix"/>
+    </condition>
+    <condition property="javafx.platform" value="win">
+        <os family="windows"/>
+    </condition>
+    
+    <!-- JavaFX modules needed -->
+    <property name="javafx.modules" value="javafx.controls,javafx.fxml"/>
+    
+    <!-- JavaFX JARs URLs -->
+    <property name="maven.repo" value="https://repo1.maven.org/maven2"/>
+    <property name="javafx.base.url" value="${maven.repo}/org/openjfx"/>
+
+    <!-- Initialize -->
+    <target name="init">
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${classes.dir}"/>
+        <mkdir dir="${lib.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+    </target>
+
+    <!-- Download JavaFX JARs if not present -->
+    <target name="download-javafx" depends="init">
+        <echo message="Downloading JavaFX ${javafx.version} for ${javafx.platform}..."/>
+        
+        <!-- Base module -->
+        <get src="${javafx.base.url}/javafx-base/${javafx.version}/javafx-base-${javafx.version}.jar"
+             dest="${lib.dir}/javafx-base-${javafx.version}.jar" skipexisting="true"/>
+        <get src="${javafx.base.url}/javafx-base/${javafx.version}/javafx-base-${javafx.version}-${javafx.platform}.jar"
+             dest="${lib.dir}/javafx-base-${javafx.version}-${javafx.platform}.jar" skipexisting="true"/>
+        
+        <!-- Graphics module -->
+        <get src="${javafx.base.url}/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}.jar"
+             dest="${lib.dir}/javafx-graphics-${javafx.version}.jar" skipexisting="true"/>
+        <get src="${javafx.base.url}/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}-${javafx.platform}.jar"
+             dest="${lib.dir}/javafx-graphics-${javafx.version}-${javafx.platform}.jar" skipexisting="true"/>
+        
+        <!-- Controls module -->
+        <get src="${javafx.base.url}/javafx-controls/${javafx.version}/javafx-controls-${javafx.version}.jar"
+             dest="${lib.dir}/javafx-controls-${javafx.version}.jar" skipexisting="true"/>
+        <get src="${javafx.base.url}/javafx-controls/${javafx.version}/javafx-controls-${javafx.version}-${javafx.platform}.jar"
+             dest="${lib.dir}/javafx-controls-${javafx.version}-${javafx.platform}.jar" skipexisting="true"/>
+        
+        <!-- FXML module -->
+        <get src="${javafx.base.url}/javafx-fxml/${javafx.version}/javafx-fxml-${javafx.version}.jar"
+             dest="${lib.dir}/javafx-fxml-${javafx.version}.jar" skipexisting="true"/>
+        <get src="${javafx.base.url}/javafx-fxml/${javafx.version}/javafx-fxml-${javafx.version}-${javafx.platform}.jar"
+             dest="${lib.dir}/javafx-fxml-${javafx.version}-${javafx.platform}.jar" skipexisting="true"/>
+    </target>
+
+    <!-- Define classpath -->
+    <path id="classpath">
+        <fileset dir="${lib.dir}">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <!-- Compile -->
+    <target name="compile" depends="download-javafx">
+        <echo message="Compiling sources..."/>
+        <javac srcdir="${src.dir}" 
+               destdir="${classes.dir}" 
+               classpathref="classpath"
+               includeantruntime="false"
+               source="17"
+               target="17"
+               encoding="UTF-8">
+            <compilerarg value="--module-path"/>
+            <compilerarg value="${lib.dir}"/>
+            <compilerarg value="--add-modules"/>
+            <compilerarg value="${javafx.modules}"/>
+        </javac>
+    </target>
+
+    <!-- Run -->
+    <target name="run" depends="compile">
+        <echo message="Running Nim Client..."/>
+        <java classname="${main.class}" fork="true" failonerror="true">
+            <classpath>
+                <path refid="classpath"/>
+                <pathelement location="${classes.dir}"/>
+            </classpath>
+            <jvmarg value="--module-path"/>
+            <jvmarg value="${lib.dir}"/>
+            <jvmarg value="--add-modules"/>
+            <jvmarg value="${javafx.modules}"/>
+            <jvmarg value="--add-opens=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED"/>
+            <jvmarg value="--add-exports=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED"/>
+        </java>
+    </target>
+
+    <!-- Create JAR -->
+    <target name="jar" depends="compile">
+        <echo message="Creating JAR..."/>
+        <jar destfile="${dist.dir}/nim-client.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main.class}"/>
+            </manifest>
+        </jar>
+        <!-- Copy libraries -->
+        <copy todir="${dist.dir}/lib">
+            <fileset dir="${lib.dir}">
+                <include name="*.jar"/>
+            </fileset>
+        </copy>
+        <echo message="JAR created at ${dist.dir}/nim-client.jar"/>
+        <echo message="To run: java --module-path dist/lib --add-modules ${javafx.modules} -jar dist/nim-client.jar"/>
+    </target>
+
+    <!-- Clean -->
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+        <delete file="nim_client.log"/>
+    </target>
+
+    <!-- Clean all (including downloaded libs) -->
+    <target name="clean-all" depends="clean">
+        <delete dir="${lib.dir}"/>
+    </target>
+
+    <!-- Help -->
+    <target name="help">
+        <echo message="Nim Game Client - Build targets:"/>
+        <echo message="  ant compile  - Compile the source code"/>
+        <echo message="  ant run      - Compile and run the application"/>
+        <echo message="  ant jar      - Create distributable JAR"/>
+        <echo message="  ant clean    - Clean build files"/>
+        <echo message="  ant clean-all - Clean everything including libraries"/>
+        <echo message="  ant help     - Show this help"/>
+    </target>
+</project>
+

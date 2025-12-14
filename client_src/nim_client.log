@@ -1,0 +1,15 @@
+[2025-12-14 13:18:40] [INFO] Application starting...
+[2025-12-14 13:18:40] [INFO] Login view displayed
+[2025-12-14 13:18:40] [INFO] Application started successfully
+[2025-12-14 13:18:48] [INFO] Connected to server 127.0.0.1:10000
+[2025-12-14 13:18:48] [INFO] Login successful
+[2025-12-14 13:18:49] [INFO] Lobby view displayed
+[2025-12-14 13:18:57] [INFO] Room created with ID: 0
+[2025-12-14 13:19:16] [WARNING] Server closed connection
+[2025-12-14 13:19:16] [WARNING] Connection lost
+[2025-12-14 13:19:16] [INFO] Attempting reconnect 1/10 in 3000 ms...
+[2025-12-14 13:19:16] [INFO] Disconnected from server
+[2025-12-14 13:19:16] [INFO] Login view displayed
+[2025-12-14 13:19:19] [INFO] Reconnected to server successfully
+[2025-12-14 13:19:19] [WARNING] Unexpected message in lobby: LOGIN_OK
+[2025-12-14 13:19:19] [INFO] Application closing...
