@@ -282,11 +282,8 @@ public class GameView {
      */
     private void updateUI() {
         int stones = gameState.getStones();
-        boolean myTurn = gameState.isMyTurn();
         
         stonesCountLabel.setText(String.valueOf(stones));
-        turnLabel.setText(myTurn ? "Jste na tahu!" : "Soupeř je na tahu");
-        turnLabel.setTextFill(Color.web(myTurn ? Components.SUCCESS_COLOR : Components.TEXT_LIGHT));
         
         mySkipsLabel.setText("Vaše přeskočení: " + gameState.getMySkipsRemaining());
         oppSkipsLabel.setText("Soupeřova přeskočení: " + gameState.getOpponentSkipsRemaining());
@@ -297,10 +294,7 @@ public class GameView {
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, Math.max(1, maxTake), 1);
         takeSpinner.setValueFactory(factory);
         
-        // Aktualizuj tlacitka
-        takeButton.setDisable(!myTurn || stones == 0);
-        skipButton.setDisable(!myTurn || !gameState.canSkip());
-        
+        // Aktualizuj stav protihrače a tlačítek
         updateOpponentStatus();
     }
 
@@ -314,16 +308,25 @@ public class GameView {
             case CONNECTED:
                 opponentStatusLabel.setText("");
                 opponentStatusLabel.setVisible(false);
+                // Obnov tlačítka podle stavu hry
+                updateButtonStates();
                 break;
             case DISCONNECTED:
-                opponentStatusLabel.setText("⚠ Soupeř je odpojen");
+                opponentStatusLabel.setText("⚠ Soupeř je odpojen - hra pozastavena");
                 opponentStatusLabel.setTextFill(Color.web(Components.WARNING_COLOR));
                 opponentStatusLabel.setVisible(true);
+                // Disabluj tlačítka - hra je pozastavena
+                takeButton.setDisable(true);
+                skipButton.setDisable(true);
+                turnLabel.setText("Hra pozastavena");
+                turnLabel.setTextFill(Color.web(Components.WARNING_COLOR));
                 break;
             case RECONNECTED:
                 opponentStatusLabel.setText("✓ Soupeř se znovu připojil");
                 opponentStatusLabel.setTextFill(Color.web(Components.SUCCESS_COLOR));
                 opponentStatusLabel.setVisible(true);
+                // Obnov tlačítka podle stavu hry
+                updateButtonStates();
                 
                 // Skryj po 3 sekundach
                 Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(3), e -> {
@@ -333,6 +336,27 @@ public class GameView {
                 }));
                 timeline.play();
                 break;
+        }
+    }
+    
+    /**
+     * Aktualizuje stav tlačítek podle herního stavu.
+     */
+    private void updateButtonStates() {
+        boolean myTurn = gameState.isMyTurn();
+        boolean canPlay = myTurn && gameState.getStones() > 0 && 
+                          gameState.getOpponentStatus() != GameState.OpponentStatus.DISCONNECTED;
+        
+        takeButton.setDisable(!canPlay);
+        skipButton.setDisable(!canPlay || !gameState.canSkip());
+        
+        // Aktualizuj turn label
+        if (gameState.getOpponentStatus() == GameState.OpponentStatus.DISCONNECTED) {
+            turnLabel.setText("Hra pozastavena");
+            turnLabel.setTextFill(Color.web(Components.WARNING_COLOR));
+        } else {
+            turnLabel.setText(myTurn ? "Jste na tahu!" : "Soupeř je na tahu");
+            turnLabel.setTextFill(Color.web(myTurn ? Components.SUCCESS_COLOR : Components.TEXT_LIGHT));
         }
     }
 
