@@ -302,6 +302,11 @@ public class GameView {
      * Aktualizuje status protihrace.
      */
     private void updateOpponentStatus() {
+        // Kontrola, zda jsou UI komponenty inicializovány
+        if (opponentStatusLabel == null || takeButton == null || skipButton == null || turnLabel == null) {
+            return;
+        }
+        
         GameState.OpponentStatus status = gameState.getOpponentStatus();
         
         switch (status) {
@@ -343,6 +348,11 @@ public class GameView {
      * Aktualizuje stav tlačítek podle herního stavu.
      */
     private void updateButtonStates() {
+        // Kontrola, zda jsou UI komponenty inicializovány
+        if (takeButton == null || skipButton == null || turnLabel == null) {
+            return;
+        }
+        
         boolean myTurn = gameState.isMyTurn();
         boolean canPlay = myTurn && gameState.getStones() > 0 && 
                           gameState.getOpponentStatus() != GameState.OpponentStatus.DISCONNECTED;
@@ -447,6 +457,11 @@ public class GameView {
         
         client.setConnectionStateHandler(state -> {
             Platform.runLater(() -> {
+                // Kontrola, zda jsou UI komponenty inicializovány
+                if (statusIndicator == null || statusLabel == null) {
+                    return;
+                }
+                
                 boolean connected = state == Client.ConnectionState.CONNECTED;
                 statusIndicator.setStyle(String.format(
                         "-fx-background-color: %s; -fx-background-radius: 5;",
@@ -456,8 +471,8 @@ public class GameView {
                     case DISCONNECTED:
                         statusLabel.setText("Odpojeno");
                         // Disabluj ovládací prvky
-                        takeButton.setDisable(true);
-                        skipButton.setDisable(true);
+                        if (takeButton != null) takeButton.setDisable(true);
+                        if (skipButton != null) skipButton.setDisable(true);
                         break;
                     case CONNECTING:
                         statusLabel.setText("Připojování...");
@@ -470,8 +485,8 @@ public class GameView {
                     case RECONNECTING:
                         statusLabel.setText("Obnovování spojení...");
                         // Disabluj ovládací prvky během reconnectu
-                        takeButton.setDisable(true);
-                        skipButton.setDisable(true);
+                        if (takeButton != null) takeButton.setDisable(true);
+                        if (skipButton != null) skipButton.setDisable(true);
                         break;
                 }
             });
