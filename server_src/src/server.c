@@ -264,6 +264,12 @@ static void read_from_client(Server *server, Player *player) {
                           player->nickname[0] ? player->nickname : "(unknown)",
                           line_start);
                 server_handle_message(server, player, line_start);
+                
+                /* Po zpracovani zkontroluj, zda hrac nebyl odpojen */
+                if (player->socket_fd < 0 || !player->is_active) {
+                    /* Hrac byl odpojen behem zpracovani zpravy - ukoncit */
+                    return;
+                }
             }
         }
         
@@ -272,11 +278,15 @@ static void read_from_client(Server *server, Player *player) {
     
     /* Presun zbytek bufferu na zacatek */
     int remaining = player->recv_buffer_len - (line_start - player->recv_buffer);
-    if (remaining > 0) {
+    if (remaining > 0 && remaining <= BUFFER_SIZE) {
         memmove(player->recv_buffer, line_start, remaining);
+        player->recv_buffer_len = remaining;
+        player->recv_buffer[remaining] = '\0';
+    } else {
+        /* Neplatna hodnota remaining - reset bufferu */
+        player->recv_buffer_len = 0;
+        player->recv_buffer[0] = '\0';
     }
-    player->recv_buffer_len = remaining;
-    player->recv_buffer[remaining] = '\0';
 }
 
 /* ============================================
