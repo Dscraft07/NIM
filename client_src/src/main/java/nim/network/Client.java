@@ -1,5 +1,6 @@
 package nim.network;
 
+import javafx.application.Platform;
 import nim.util.Logger;
 
 import java.io.*;
@@ -328,10 +329,8 @@ public class Client {
             
             if (invalidMessageCount >= Protocol.MAX_INVALID_MESSAGES) {
                 Logger.error("Too many invalid messages from server, disconnecting");
-                disconnect(false);
-                if (disconnectHandler != null) {
-                    disconnectHandler.run();
-                }
+                // Spust disconnect v JINEM vlakne, abychom nezpusobili deadlock
+                handleInvalidDataDisconnect();
             }
             return;
         }
@@ -346,10 +345,8 @@ public class Client {
             
             if (invalidMessageCount >= Protocol.MAX_INVALID_MESSAGES) {
                 Logger.error("Too many invalid messages from server, disconnecting");
-                disconnect(false);
-                if (disconnectHandler != null) {
-                    disconnectHandler.run();
-                }
+                // Spust disconnect v JINEM vlakne, abychom nezpusobili deadlock
+                handleInvalidDataDisconnect();
             }
             return;
         }
@@ -397,6 +394,36 @@ public class Client {
         
         // Zkus reconnect
         attemptReconnect();
+    }
+    
+    /**
+     * Zpracuje odpojeni kvuli nevalidnim datum.
+     * Spusti se v samostatnem vlakne, aby nedoslo k deadlocku.
+     */
+    private void handleInvalidDataDisconnect() {
+        // Spust v novem vlakne - nemuzeme volat disconnect z receiver threadu
+        CompletableFuture.runAsync(() -> {
+            try {
+                // Kratka pauza, aby se receiver thread stihl ukoncit
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            
+            // Nastav flag aby receiver thread skoncil
+            connected = false;
+            closeSocket();
+            
+            // Notifikuj o odpojeni
+            notifyConnectionState(ConnectionState.DISCONNECTED);
+            
+            // Zavolej disconnect handler na JavaFX ukazat dialog
+            if (disconnectHandler != null) {
+                Platform.runLater(() -> {
+                    disconnectHandler.run();
+                });
+            }
+        });
     }
 
     /**
