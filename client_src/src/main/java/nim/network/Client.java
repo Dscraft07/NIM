@@ -322,16 +322,24 @@ public class Client {
      * Zpracuje prijatou zpravu.
      */
     private void processMessage(String rawMessage) {
+        // Uz jsme se rozhodli odpojit - ignoruj dalsi zpravy
+        if (disconnectHandlerCalled || !connected) {
+            return;
+        }
+        
         // Validace zpravy
         String validationError = Protocol.validateMessage(rawMessage);
         if (validationError != null) {
             invalidMessageCount++;
-            Logger.warning("Invalid message from server (%d/%d): %s", 
-                          invalidMessageCount, Protocol.MAX_INVALID_MESSAGES, validationError);
+            
+            // Loguj jen prvnich par chyb
+            if (invalidMessageCount <= Protocol.MAX_INVALID_MESSAGES) {
+                Logger.warning("Invalid message from server (%d/%d): %s", 
+                              invalidMessageCount, Protocol.MAX_INVALID_MESSAGES, validationError);
+            }
             
             if (invalidMessageCount >= Protocol.MAX_INVALID_MESSAGES) {
                 Logger.error("Too many invalid messages from server, disconnecting");
-                // Spust disconnect v JINEM vlakne, abychom nezpusobili deadlock
                 handleInvalidDataDisconnect();
             }
             return;
@@ -342,12 +350,15 @@ public class Client {
         // Kontrola UNKNOWN typu (nevalidni prikaz)
         if (message.getType() == Protocol.MessageType.UNKNOWN) {
             invalidMessageCount++;
-            Logger.warning("Unknown message type from server (%d/%d): %s", 
-                          invalidMessageCount, Protocol.MAX_INVALID_MESSAGES, rawMessage);
+            
+            // Loguj jen prvnich par chyb
+            if (invalidMessageCount <= Protocol.MAX_INVALID_MESSAGES) {
+                Logger.warning("Unknown message type from server (%d/%d): %s", 
+                              invalidMessageCount, Protocol.MAX_INVALID_MESSAGES, rawMessage);
+            }
             
             if (invalidMessageCount >= Protocol.MAX_INVALID_MESSAGES) {
                 Logger.error("Too many invalid messages from server, disconnecting");
-                // Spust disconnect v JINEM vlakne, abychom nezpusobili deadlock
                 handleInvalidDataDisconnect();
             }
             return;
