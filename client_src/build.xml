@@ -12,8 +12,9 @@
     <property name="dist.dir" value="dist"/>
     <property name="main.class" value="nim.Main"/>
     
-    <!-- JavaFX version - use 21 for better macOS compatibility -->
-    <property name="javafx.version" value="21.0.1"/>
+    <!-- JavaFX version -->
+    <!-- Use 17.0.2 for Java 11 compatibility, or 21.0.1 for Java 17+ -->
+    <property name="javafx.version" value="17.0.2"/>
     
     <!-- Detect OS for JavaFX platform -->
     <condition property="javafx.platform" value="mac-aarch64">
@@ -81,8 +82,8 @@
         <javac srcdir="${src.dir}" 
                destdir="${classes.dir}" 
                includeantruntime="false"
-               source="17"
-               target="17"
+               source="11"
+               target="11"
                encoding="UTF-8">
             <compilerarg value="--module-path"/>
             <compilerarg value="${lib.dir}"/>

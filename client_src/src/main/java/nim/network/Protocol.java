@@ -15,6 +15,12 @@ public class Protocol {
     
     /** Ukoncovac zpravy */
     public static final String TERMINATOR = "\n";
+    
+    /** Maximalni delka zpravy */
+    public static final int MAX_MESSAGE_LENGTH = 1024;
+    
+    /** Maximalni pocet nevalidnich zprav pred odpojenim */
+    public static final int MAX_INVALID_MESSAGES = 3;
 
     /**
      * Typy zprav.
@@ -139,10 +145,57 @@ public class Protocol {
     }
 
     /**
+     * Kontroluje, zda zprava obsahuje pouze validni ASCII znaky.
+     * Povolene znaky: tisknutelne ASCII (32-126), tab (9), CR (13), LF (10)
+     */
+    public static boolean isValidProtocolData(String message) {
+        if (message == null) {
+            return false;
+        }
+        
+        for (int i = 0; i < message.length(); i++) {
+            char c = message.charAt(i);
+            // Povolene: tisknutelne ASCII (32-126), tab, CR, LF
+            if (!((c >= 32 && c <= 126) || c == 9 || c == 10 || c == 13)) {
+                Logger.warning("Invalid character in message at position %d: 0x%02X", i, (int) c);
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * Validuje zpravu - kontroluje delku a znaky.
+     * @return null pokud je zprava validni, jinak chybova hlaska
+     */
+    public static String validateMessage(String rawMessage) {
+        if (rawMessage == null) {
+            return "Null message";
+        }
+        
+        if (rawMessage.length() > MAX_MESSAGE_LENGTH) {
+            return "Message too long: " + rawMessage.length() + " > " + MAX_MESSAGE_LENGTH;
+        }
+        
+        if (!isValidProtocolData(rawMessage)) {
+            return "Invalid characters in message (binary data?)";
+        }
+        
+        return null; // OK
+    }
+
+    /**
      * Parsuje prijatou zpravu.
      */
     public static ParsedMessage parse(String rawMessage) {
         if (rawMessage == null || rawMessage.isEmpty()) {
+            return new ParsedMessage(MessageType.UNKNOWN, new String[0], rawMessage);
+        }
+        
+        // Validace dat
+        String validationError = validateMessage(rawMessage);
+        if (validationError != null) {
+            Logger.warning("Invalid message rejected: %s", validationError);
             return new ParsedMessage(MessageType.UNKNOWN, new String[0], rawMessage);
         }
 

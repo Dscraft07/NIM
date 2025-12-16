@@ -53,7 +53,7 @@ public class Client {
     private volatile int reconnectAttempts = 0;
     private volatile long lastPingTime = 0;
     private volatile boolean waitingForPong = false;
-    private volatile boolean disconnectHandlerCalled = false;
+    private volatile int invalidMessageCount = 0;
 
     /**
      * Stavy pripojeni.
@@ -124,7 +124,7 @@ public class Client {
             
             connected = true;
             reconnectAttempts = 0;
-            disconnectHandlerCalled = false;
+            invalidMessageCount = 0;
             
             // Spust prijimaci vlakno
             startReceiver();
@@ -319,7 +319,43 @@ public class Client {
      * Zpracuje prijatou zpravu.
      */
     private void processMessage(String rawMessage) {
+        // Validace zpravy
+        String validationError = Protocol.validateMessage(rawMessage);
+        if (validationError != null) {
+            invalidMessageCount++;
+            Logger.warning("Invalid message from server (%d/%d): %s", 
+                          invalidMessageCount, Protocol.MAX_INVALID_MESSAGES, validationError);
+            
+            if (invalidMessageCount >= Protocol.MAX_INVALID_MESSAGES) {
+                Logger.error("Too many invalid messages from server, disconnecting");
+                disconnect(false);
+                if (disconnectHandler != null) {
+                    disconnectHandler.run();
+                }
+            }
+            return;
+        }
+        
         Protocol.ParsedMessage message = Protocol.parse(rawMessage);
+        
+        // Kontrola UNKNOWN typu (nevalidni prikaz)
+        if (message.getType() == Protocol.MessageType.UNKNOWN) {
+            invalidMessageCount++;
+            Logger.warning("Unknown message type from server (%d/%d): %s", 
+                          invalidMessageCount, Protocol.MAX_INVALID_MESSAGES, rawMessage);
+            
+            if (invalidMessageCount >= Protocol.MAX_INVALID_MESSAGES) {
+                Logger.error("Too many invalid messages from server, disconnecting");
+                disconnect(false);
+                if (disconnectHandler != null) {
+                    disconnectHandler.run();
+                }
+            }
+            return;
+        }
+        
+        // Validni zprava - reset pocitadla
+        invalidMessageCount = 0;
         
         // Zpracuj PONG lokalne
         if (message.getType() == Protocol.MessageType.PONG) {
@@ -337,8 +373,7 @@ public class Client {
         if (message.getType() == Protocol.MessageType.SERVER_SHUTDOWN) {
             Logger.info("Server is shutting down");
             disconnect(false);
-            if (disconnectHandler != null && !disconnectHandlerCalled) {
-                disconnectHandlerCalled = true;
+            if (disconnectHandler != null) {
                 disconnectHandler.run();
             }
             return;
@@ -372,8 +407,7 @@ public class Client {
             Logger.error("Max reconnect attempts reached (%d), giving up", reconnectAttempts);
             reconnecting = false;
             notifyConnectionState(ConnectionState.DISCONNECTED);
-            if (disconnectHandler != null && !disconnectHandlerCalled) {
-                disconnectHandlerCalled = true;
+            if (disconnectHandler != null) {
                 disconnectHandler.run();
             }
             return;
@@ -413,7 +447,7 @@ public class Client {
                 reconnecting = false;
                 reconnectAttempts = 0;
                 waitingForPong = false;
-                disconnectHandlerCalled = false;
+                invalidMessageCount = 0;
                 
                 // Spust prijimaci vlakno
                 startReceiver();

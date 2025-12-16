@@ -356,24 +356,17 @@ public class LobbyView {
         
         client.setConnectionStateHandler(state -> {
             Platform.runLater(() -> {
-                // Kontrola, zda jsou UI komponenty inicializovány
-                if (statusIndicator == null || statusLabel == null) {
-                    return;
-                }
-                
                 boolean connected = state == Client.ConnectionState.CONNECTED;
                 statusIndicator.setStyle(String.format(
                         "-fx-background-color: %s; -fx-background-radius: 5;",
                         connected ? Components.SUCCESS_COLOR : Components.DANGER_COLOR));
                 
-                // Disabluj/enabluj ovládací prvky podle stavu spojení (pokud existují)
-                if (refreshButton != null && createButton != null && joinButton != null && roomNameField != null) {
-                    boolean controlsEnabled = connected;
-                    refreshButton.setDisable(!controlsEnabled);
-                    createButton.setDisable(!controlsEnabled);
-                    joinButton.setDisable(!controlsEnabled);
-                    roomNameField.setDisable(!controlsEnabled);
-                }
+                // Disabluj/enabluj ovládací prvky podle stavu spojení
+                boolean controlsEnabled = connected;
+                refreshButton.setDisable(!controlsEnabled);
+                createButton.setDisable(!controlsEnabled);
+                joinButton.setDisable(!controlsEnabled);
+                roomNameField.setDisable(!controlsEnabled);
                 
                 switch (state) {
                     case DISCONNECTED:
@@ -384,6 +377,8 @@ public class LobbyView {
                         break;
                     case CONNECTED:
                         statusLabel.setText("Připojeno");
+                        // Automaticky obnov seznam místností po reconnectu
+                        client.send(Protocol.createListRooms());
                         break;
                     case RECONNECTING:
                         statusLabel.setText("Obnovování spojení...");
@@ -447,27 +442,6 @@ public class LobbyView {
                 
             case GAME_RESUMED:
                 handleGameResumed(message);
-                break;
-            
-            case LOGIN_OK:
-                // Server restartoval - jsme znovu přihlášeni
-                // Obnov seznam místností
-                Logger.info("Server restarted, refreshing lobby");
-                gameState.leaveRoom();
-                if (waitingPane != null) {
-                    hideWaitingPane();
-                }
-                if (client.isConnected()) {
-                    client.send(Protocol.createListRooms());
-                }
-                break;
-                
-            case LOGIN_ERR:
-                // Chyba při reconnectu - vrať na login
-                Logger.warning("Login failed after reconnect: %s", message.getParam(1));
-                gameState.reset();
-                LoginView loginView = new LoginView(stage);
-                loginView.show();
                 break;
                 
             case ERROR:

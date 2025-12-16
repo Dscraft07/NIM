@@ -40,7 +40,6 @@ public class GameView {
     private Spinner<Integer> takeSpinner;
     private Button takeButton;
     private Button skipButton;
-    private Label skipNoteLabel;
     private Label statusLabel;
     private Region statusIndicator;
     private VBox gameOverPane;
@@ -160,10 +159,10 @@ public class GameView {
         skipButton.setOnAction(e -> handleSkip());
         skipButton.setDisable(!gameState.isMyTurn() || !gameState.canSkip());
         
-        skipNoteLabel = Components.createTextLight(
+        Label skipNote = Components.createTextLight(
                 gameState.canSkip() ? "(zbývá 1 přeskočení)" : "(vyčerpáno)");
         
-        skipBox.getChildren().addAll(skipLabel, skipButton, skipNoteLabel);
+        skipBox.getChildren().addAll(skipLabel, skipButton, skipNote);
         
         controlsPanel.getChildren().addAll(takeBox, skipBox);
 
@@ -283,16 +282,14 @@ public class GameView {
      */
     private void updateUI() {
         int stones = gameState.getStones();
+        boolean myTurn = gameState.isMyTurn();
         
         stonesCountLabel.setText(String.valueOf(stones));
+        turnLabel.setText(myTurn ? "Jste na tahu!" : "Soupeř je na tahu");
+        turnLabel.setTextFill(Color.web(myTurn ? Components.SUCCESS_COLOR : Components.TEXT_LIGHT));
         
         mySkipsLabel.setText("Vaše přeskočení: " + gameState.getMySkipsRemaining());
         oppSkipsLabel.setText("Soupeřova přeskočení: " + gameState.getOpponentSkipsRemaining());
-        
-        // Aktualizuj poznámku u tlačítka přeskočit
-        if (skipNoteLabel != null) {
-            skipNoteLabel.setText(gameState.canSkip() ? "(zbývá 1 přeskočení)" : "(vyčerpáno)");
-        }
         
         // Aktualizuj spinner
         int maxTake = gameState.getMaxTake();
@@ -300,7 +297,10 @@ public class GameView {
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, Math.max(1, maxTake), 1);
         takeSpinner.setValueFactory(factory);
         
-        // Aktualizuj stav protihrače a tlačítek
+        // Aktualizuj tlacitka
+        takeButton.setDisable(!myTurn || stones == 0);
+        skipButton.setDisable(!myTurn || !gameState.canSkip());
+        
         updateOpponentStatus();
     }
 
@@ -308,36 +308,22 @@ public class GameView {
      * Aktualizuje status protihrace.
      */
     private void updateOpponentStatus() {
-        // Kontrola, zda jsou UI komponenty inicializovány
-        if (opponentStatusLabel == null || takeButton == null || skipButton == null || turnLabel == null) {
-            return;
-        }
-        
         GameState.OpponentStatus status = gameState.getOpponentStatus();
         
         switch (status) {
             case CONNECTED:
                 opponentStatusLabel.setText("");
                 opponentStatusLabel.setVisible(false);
-                // Obnov tlačítka podle stavu hry
-                updateButtonStates();
                 break;
             case DISCONNECTED:
-                opponentStatusLabel.setText("⚠ Soupeř je odpojen - hra pozastavena");
+                opponentStatusLabel.setText("⚠ Soupeř je odpojen");
                 opponentStatusLabel.setTextFill(Color.web(Components.WARNING_COLOR));
                 opponentStatusLabel.setVisible(true);
-                // Disabluj tlačítka - hra je pozastavena
-                takeButton.setDisable(true);
-                skipButton.setDisable(true);
-                turnLabel.setText("Hra pozastavena");
-                turnLabel.setTextFill(Color.web(Components.WARNING_COLOR));
                 break;
             case RECONNECTED:
                 opponentStatusLabel.setText("✓ Soupeř se znovu připojil");
                 opponentStatusLabel.setTextFill(Color.web(Components.SUCCESS_COLOR));
                 opponentStatusLabel.setVisible(true);
-                // Obnov tlačítka podle stavu hry
-                updateButtonStates();
                 
                 // Skryj po 3 sekundach
                 Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(3), e -> {
@@ -349,42 +335,13 @@ public class GameView {
                 break;
         }
     }
-    
-    /**
-     * Aktualizuje stav tlačítek podle herního stavu.
-     */
-    private void updateButtonStates() {
-        // Kontrola, zda jsou UI komponenty inicializovány
-        if (takeButton == null || skipButton == null || turnLabel == null) {
-            return;
-        }
-        
-        boolean myTurn = gameState.isMyTurn();
-        boolean canPlay = myTurn && gameState.getStones() > 0 && 
-                          gameState.getOpponentStatus() != GameState.OpponentStatus.DISCONNECTED;
-        
-        takeButton.setDisable(!canPlay);
-        skipButton.setDisable(!canPlay || !gameState.canSkip());
-        
-        // Aktualizuj turn label
-        if (gameState.getOpponentStatus() == GameState.OpponentStatus.DISCONNECTED) {
-            turnLabel.setText("Hra pozastavena");
-            turnLabel.setTextFill(Color.web(Components.WARNING_COLOR));
-        } else {
-            turnLabel.setText(myTurn ? "Jste na tahu!" : "Soupeř je na tahu");
-            turnLabel.setTextFill(Color.web(myTurn ? Components.SUCCESS_COLOR : Components.TEXT_LIGHT));
-        }
-    }
 
     /**
      * Zobrazi game over obrazovku.
      */
     private void showGameOver() {
         String winner = gameState.getWinner();
-        String myNickname = gameState.getNickname();
-        boolean iWon = winner.equals(myNickname);
-        
-        Logger.debug("GAME_OVER: winner='%s', myNickname='%s', iWon=%b", winner, myNickname, iWon);
+        boolean iWon = winner.equals(gameState.getNickname());
         
         gameOverTitle.setText(iWon ? "Vyhráli jste!" : "Prohráli jste");
         gameOverTitle.setTextFill(Color.web(iWon ? Components.SUCCESS_COLOR : Components.DANGER_COLOR));
@@ -466,11 +423,6 @@ public class GameView {
         
         client.setConnectionStateHandler(state -> {
             Platform.runLater(() -> {
-                // Kontrola, zda jsou UI komponenty inicializovány
-                if (statusIndicator == null || statusLabel == null) {
-                    return;
-                }
-                
                 boolean connected = state == Client.ConnectionState.CONNECTED;
                 statusIndicator.setStyle(String.format(
                         "-fx-background-color: %s; -fx-background-radius: 5;",
@@ -480,8 +432,8 @@ public class GameView {
                     case DISCONNECTED:
                         statusLabel.setText("Odpojeno");
                         // Disabluj ovládací prvky
-                        if (takeButton != null) takeButton.setDisable(true);
-                        if (skipButton != null) skipButton.setDisable(true);
+                        takeButton.setDisable(true);
+                        skipButton.setDisable(true);
                         break;
                     case CONNECTING:
                         statusLabel.setText("Připojování...");
@@ -494,8 +446,8 @@ public class GameView {
                     case RECONNECTING:
                         statusLabel.setText("Obnovování spojení...");
                         // Disabluj ovládací prvky během reconnectu
-                        if (takeButton != null) takeButton.setDisable(true);
-                        if (skipButton != null) skipButton.setDisable(true);
+                        takeButton.setDisable(true);
+                        skipButton.setDisable(true);
                         break;
                 }
             });
@@ -563,29 +515,12 @@ public class GameView {
                 
             case LEAVE_OK:
                 gameState.leaveRoom();
-                LobbyView lobbyViewLeave = new LobbyView(stage, client, gameState);
-                lobbyViewLeave.show();
+                LobbyView lobbyView = new LobbyView(stage, client, gameState);
+                lobbyView.show();
                 break;
                 
             case GAME_RESUMED:
                 handleGameResumed(message);
-                break;
-            
-            case LOGIN_OK:
-                // Server restartoval - nemá náš herní stav
-                // Přejdi do lobby (bez GAME_RESUMED = žádná hra k obnovení)
-                Logger.info("Server restarted, returning to lobby");
-                gameState.reset();
-                LobbyView lobbyViewReset = new LobbyView(stage, client, gameState);
-                lobbyViewReset.show();
-                break;
-                
-            case LOGIN_ERR:
-                // Chyba při reconnectu - vrať na login
-                Logger.warning("Login failed after reconnect: %s", message.getParam(1));
-                gameState.reset();
-                LoginView loginView = new LoginView(stage);
-                loginView.show();
                 break;
                 
             case ERROR:

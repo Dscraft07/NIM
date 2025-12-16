@@ -25,3 +25,4 @@ java.net.SocketTimeoutException: Connect timed out
 	at nim.network.Client.connect(Unknown Source)
 	at nim.ui.LoginView.lambda$handleConnect$0(Unknown Source)
 	at java.base/java.lang.Thread.run(Thread.java:1474)
+[2025-12-14 19:22:46] [INFO] Application closing...
