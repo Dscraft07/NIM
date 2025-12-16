@@ -55,6 +55,7 @@ public class Client {
     private volatile long lastPingTime = 0;
     private volatile boolean waitingForPong = false;
     private volatile int invalidMessageCount = 0;
+    private volatile boolean disconnectHandlerCalled = false;
 
     /**
      * Stavy pripojeni.
@@ -126,6 +127,7 @@ public class Client {
             connected = true;
             reconnectAttempts = 0;
             invalidMessageCount = 0;
+            disconnectHandlerCalled = false;
             
             // Spust prijimaci vlakno
             startReceiver();
@@ -401,6 +403,12 @@ public class Client {
      * Spusti se v samostatnem vlakne, aby nedoslo k deadlocku.
      */
     private void handleInvalidDataDisconnect() {
+        // Zabran vicenasobnemu volani
+        if (disconnectHandlerCalled) {
+            return;
+        }
+        disconnectHandlerCalled = true;
+        
         // Spust v novem vlakne - nemuzeme volat disconnect z receiver threadu
         CompletableFuture.runAsync(() -> {
             try {
@@ -475,6 +483,7 @@ public class Client {
                 reconnectAttempts = 0;
                 waitingForPong = false;
                 invalidMessageCount = 0;
+                disconnectHandlerCalled = false;
                 
                 // Spust prijimaci vlakno
                 startReceiver();
