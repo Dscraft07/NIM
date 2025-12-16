@@ -257,12 +257,16 @@ public class LoginView {
         
         client.setDisconnectHandler(() -> {
             Platform.runLater(() -> {
-                if (gameState.getPhase() != GameState.Phase.DISCONNECTED &&
-                    gameState.getPhase() != GameState.Phase.CONNECTING &&
-                    gameState.getPhase() != GameState.Phase.LOGIN) {
-                    Components.showError("Odpojeno", "Spojení se serverem bylo ztraceno.");
-                    show(); // Zobraz login
-                }
+                Logger.warning("Disconnect handler called, phase: %s", gameState.getPhase());
+                
+                // Resetuj UI stav (spinner, tlacitka)
+                setConnecting(false);
+                
+                // Zobraz chybovou hlasku v UI
+                showError("Spojení bylo ztraceno");
+                
+                // Nastav stav
+                gameState.setPhase(GameState.Phase.DISCONNECTED);
             });
         });
     }
